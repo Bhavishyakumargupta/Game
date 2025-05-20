@@ -1,0 +1,260 @@
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.Random;
+import javax.swing.*;
+
+public class AlienInvasionGame extends JFrame {
+    private static final int WIDTH = 800;
+    private static final int HEIGHT = 600;
+    private static final int HUMAN_COUNT = 20;
+    private static final int SPIDER_SPEED = 9;
+    private static final int HUMAN_SPEED = 11;
+    
+    private GamePanel gamePanel;
+    private Spider spider;
+    private ArrayList<Human> humans;
+    private int humansEaten = 0;
+    private boolean gameRunning = true;
+    
+    public AlienInvasionGame() {
+        setTitle("Alien Invasion: Spider Predator");
+        setSize(WIDTH, HEIGHT);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setResizable(false);
+        
+        spider = new Spider(WIDTH/2, HEIGHT/2, 40);
+        humans = new ArrayList<>();
+        
+        Random rand = new Random();
+        for (int i = 0; i < HUMAN_COUNT; i++) {
+            humans.add(new Human(
+                rand.nextInt(WIDTH - 30), 
+                rand.nextInt(HEIGHT - 30), 
+                15,
+                rand.nextInt(360))
+            );
+        }
+        
+        gamePanel = new GamePanel();
+        add(gamePanel);
+        
+        addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_LEFT) {
+                    spider.setDx(-SPIDER_SPEED);
+                } else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
+                    spider.setDx(SPIDER_SPEED);
+                } else if (e.getKeyCode() == KeyEvent.VK_UP) {
+                    spider.setDy(-SPIDER_SPEED);
+                } else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    spider.setDy(SPIDER_SPEED);
+                }
+            }
+            
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_LEFT || e.getKeyCode() == KeyEvent.VK_RIGHT) {
+                    spider.setDx(0);
+                } else if (e.getKeyCode() == KeyEvent.VK_UP || e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    spider.setDy(0);
+                }
+            }
+        });
+        
+        // Game loop
+        new Thread(() -> {
+            while (gameRunning) {
+                updateGame();
+                gamePanel.repaint();
+                try {
+                    Thread.sleep(30);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+    
+    private void updateGame() {
+        // Move spider
+        spider.move();
+        
+        // Move humans and check for collisions
+        for (int i = humans.size() - 1; i >= 0; i--) {
+            Human human = humans.get(i);
+            human.move(spider);
+            
+            // Check if spider caught this human
+            if (spider.collidesWith(human)) {
+                humans.remove(i);
+                humansEaten++;
+                
+                // Check if game over
+                if (humans.isEmpty()) {
+                    gameRunning = false;
+                    JOptionPane.showMessageDialog(this, 
+                        "Game Over! Spider ate all " + humansEaten + " humans!", 
+                        "Alien Victory", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        }
+    }
+    
+    private class GamePanel extends JPanel {
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            
+            // Draw background
+            g.setColor(Color.BLACK);
+            g.fillRect(0, 0, WIDTH, HEIGHT);
+            
+            // Draw humans
+            g.setColor(Color.WHITE);
+            for (Human human : humans) {
+                g.fillOval(human.getX(), human.getY(), human.getSize(), human.getSize());
+                
+                // Draw scared face
+                g.setColor(Color.BLACK);
+                g.fillOval(human.getX()+5, human.getY()+5, 5, 5);
+                g.fillOval(human.getX()+10, human.getY()+5, 5, 5);
+                g.drawArc(human.getX()+5, human.getY()+10, 10, 5, 0, -180);
+                g.setColor(Color.WHITE);
+            }
+            
+            // Draw spider
+            g.setColor(Color.GREEN);
+            g.fillOval(spider.getX(), spider.getY(), spider.getSize(), spider.getSize());
+            
+            // Draw spider eyes
+            g.setColor(Color.RED);
+            g.fillOval(spider.getX()+10, spider.getY()+10, 8, 8);
+            g.fillOval(spider.getX()+22, spider.getY()+10, 8, 8);
+            
+            // Draw spider legs
+            g.setColor(Color.GREEN);
+            for (int i = 0; i < 8; i++) {
+                int angle = i * 45;
+                int legLength = 20;
+                int x2 = spider.getX() + spider.getSize()/2 + (int)(legLength * Math.cos(Math.toRadians(angle)));
+                int y2 = spider.getY() + spider.getSize()/2 + (int)(legLength * Math.sin(Math.toRadians(angle)));
+                g.drawLine(spider.getX() + spider.getSize()/2, spider.getY() + spider.getSize()/2, x2, y2);
+            }
+            
+            // Draw score
+            g.setColor(Color.BLACK);
+            g.drawString("Humans Eaten: " + humansEaten + " / " + HUMAN_COUNT, 10, 20);
+        }
+    }
+    
+    private class Spider {
+        private int x, y, size;
+        private int dx, dy;
+        
+        public Spider(int x, int y, int size) {
+            this.x = x;
+            this.y = y;
+            this.size = size;
+        }
+        
+        public void move() {
+            x += dx;
+            y += dy;
+            
+            // Boundary checking
+            x = Math.max(0, Math.min(WIDTH - size, x));
+            y = Math.max(0, Math.min(HEIGHT - size, y));
+        }
+        
+        public boolean collidesWith(Human human) {
+            int spiderCenterX = x + size/2;
+            int spiderCenterY = y + size/2;
+            int humanCenterX = human.getX() + human.getSize()/2;
+            int humanCenterY = human.getY() + human.getSize()/2;
+            
+            int distance = (int)Math.sqrt(
+                Math.pow(spiderCenterX - humanCenterX, 2) + 
+                Math.pow(spiderCenterY - humanCenterY, 2)
+            );
+            
+            return distance < (size/2 + human.getSize()/2);
+        }
+        
+        public int getX() { return x; }
+        public int getY() { return y; }
+        public int getSize() { return size; }
+        public void setDx(int dx) { this.dx = dx; }
+        public void setDy(int dy) { this.dy = dy; }
+    }
+    
+    private class Human {
+        private int x, y, size;
+        private double direction; // in degrees
+        private int speed;
+        
+        public Human(int x, int y, int size, double direction) {
+            this.x = x;
+            this.y = y;
+            this.size = size;
+            this.direction = direction;
+            this.speed = HUMAN_SPEED;
+        }
+        
+        public void move(Spider spider) {
+            // Calculate distance to spider
+            double distanceToSpider = Math.sqrt(
+                Math.pow(x - spider.getX(), 2) + 
+                Math.pow(y - spider.getY(), 2)
+            );
+            
+            // Run away from spider if nearby
+            if (distanceToSpider < 150) {
+                double angleToSpider = Math.atan2(
+                    y - spider.getY(), 
+                    x - spider.getX()
+                );
+                direction = Math.toDegrees(angleToSpider);
+            }
+            // Otherwise move randomly
+            else if (Math.random() < 0.02) {
+                direction = (direction + (Math.random() * 90) - 45) % 360;
+            }
+            
+            // Move in current direction
+            x += (int)(speed * Math.cos(Math.toRadians(direction)));
+            y += (int)(speed * Math.sin(Math.toRadians(direction)));
+            
+            // Bounce off walls with better handling
+            if (x < 0) {
+                x = 0;
+                direction = (180 - direction) % 360;
+            }
+            if (x > WIDTH - size) {
+                x = WIDTH - size;
+                direction = (180 - direction) % 360;
+            }
+            if (y < 0) {
+                y = 0;
+                direction = (360 - direction) % 360;
+            }
+            if (y > HEIGHT - size) {
+                y = HEIGHT - size;
+                direction = (360 - direction) % 360;
+            }
+        }
+        
+        public int getX() { return x; }
+        public int getY() { return y; }
+        public int getSize() { return size; }
+    }
+    
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            AlienInvasionGame game = new AlienInvasionGame();
+            game.setVisible(true);
+        });
+    }
+}
