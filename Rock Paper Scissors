@@ -1,0 +1,134 @@
+import java.util.Random;
+import java.util.Scanner;
+
+public class RockPaperScissors {
+    
+    // Game objects
+    private static class GameElement {
+        String name;
+        String beats;
+        String asciiArt;
+        
+        public GameElement(String name, String beats, String asciiArt) {
+            this.name = name;
+            this.beats = beats;
+            this.asciiArt = asciiArt;
+        }
+    }
+    
+    private static final GameElement ROCK = new GameElement(
+        "Rock", 
+        "Scissors",
+        """
+            _______
+        ---'   ____)
+              (_____)
+              (_____)
+              (____)
+        ---.__(___)
+        """
+    );
+    
+    private static final GameElement PAPER = new GameElement(
+        "Paper", 
+        "Rock",
+        """
+             _______
+        ---'    ____)____
+                   ______)
+                  _______)
+                 _______)
+        ---.__________)
+        """
+    );
+    
+    private static final GameElement SCISSORS = new GameElement(
+        "Scissors", 
+        "Paper",
+        """
+            _______
+        ---'   ____)____
+                  ______)
+               __________)
+              (____)
+        ---.__(___)
+        """
+    );
+    
+    private static final GameElement[] CHOICES = {ROCK, PAPER, SCISSORS};
+    
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        Random random = new Random();
+        
+        System.out.println("Welcome to Rock Paper Scissors!");
+        System.out.print("Enter your name: ");
+        String playerName = scanner.nextLine();
+        
+        System.out.println("\nHello, " + playerName + "! Let's play!");
+        
+        int playerScore = 0;
+        int computerScore = 0;
+        
+        while (true) {
+            System.out.println("\nScore: " + playerName + " " + playerScore + " - Computer " + computerScore);
+            System.out.println("\nChoose your move:");
+            System.out.println("1. Rock");
+            System.out.println("2. Paper");
+            System.out.println("3. Scissors");
+            System.out.println("4. Quit");
+            System.out.print("Enter your choice (1-4): ");
+            
+            int playerChoice;
+            try {
+                playerChoice = scanner.nextInt();
+            } catch (Exception e) {
+                System.out.println("Please enter a valid number!");
+                scanner.next(); // clear invalid input
+                continue;
+            }
+            
+            if (playerChoice == 4) {
+                break;
+            }
+            
+            if (playerChoice < 1 || playerChoice > 3) {
+                System.out.println("Invalid choice! Please select 1, 2, or 3.");
+                continue;
+            }
+            
+            GameElement playerMove = CHOICES[playerChoice - 1];
+            GameElement computerMove = CHOICES[random.nextInt(CHOICES.length)];
+            
+            System.out.println("\n" + playerName + "'s move:");
+            System.out.println(playerMove.asciiArt);
+            System.out.println("\nComputer's move:");
+            System.out.println(computerMove.asciiArt);
+            
+            if (playerMove == computerMove) {
+                System.out.println("\nIt's a tie!");
+            } else if (playerMove.beats.equals(computerMove.name)) {
+                System.out.println("\n" + playerName + " wins! " + playerMove.name + " beats " + computerMove.name + "!");
+                playerScore++;
+            } else {
+                System.out.println("\nComputer wins! " + computerMove.name + " beats " + playerMove.name + "!");
+                computerScore++;
+            }
+        }
+        
+        System.out.println("\nFinal Score:");
+        System.out.println(playerName + ": " + playerScore);
+        System.out.println("Computer: " + computerScore);
+        
+        if (playerScore > computerScore) {
+            System.out.println("\nCongratulations, " + playerName + "! You won the game!");
+        } else if (playerScore < computerScore) {
+            System.out.println("\nBetter luck next time, " + playerName + "!");
+        } else {
+            System.out.println("\nThe game ended in a tie!");
+        }
+        
+        System.out.println("\nThanks for playing, " + playerName + "!");
+        scanner.close();
+    }
+}
